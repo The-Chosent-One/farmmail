@@ -8,7 +8,7 @@ import discord
 class DonationTracking(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        # self.coll = bot.plugin_db.get_partition(self)
+        self.coll = bot.plugin_db.get_partition(self)
 
     def cleanup_code(self, content: str) -> str:
         """Automatically removes code blocks from the code."""
@@ -59,7 +59,6 @@ class DonationTracking(commands.Cog):
                     await ctx.send(f'```py\n{value}\n```')
             else:
                 await ctx.send(f'```py\n{value}{ret}\n```')
-
 
 
 async def setup(bot: commands.Bot):
