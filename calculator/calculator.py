@@ -66,9 +66,10 @@ class Calculator(commands.Cog):
         except Exception as e:
             return
 
-        # 100 -> LOAD_CONST, 83 -> RETURN_VALUE
+        # 151 -> RESUME, 100 -> LOAD_CONST, 83 -> RETURN_VALUE
+        # https://docs.python.org/3/library/dis.html#opcode-RESUME
         # adding redundancy just in case
-        if [inst.opcode for inst in dis.get_instructions(codeobj)] != [100, 83]:
+        if [inst.opcode for inst in dis.get_instructions(codeobj)] != [151, 100, 83]:
             return
 
         res = codeobj.co_consts[0]
