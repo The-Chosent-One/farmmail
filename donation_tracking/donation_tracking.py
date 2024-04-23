@@ -27,10 +27,11 @@ class DonationTracking(commands.Cog):
         original = message.reference.resolved
 
         if original is None or isinstance(original, discord.DeletedReferencedMessage):
-            await message.channel.send("This check is triggered")
+            await message.channel.send(original is None)
+            await message.channel.send(isinstance(original, discord.DeletedReferencedMessage))
+            await message.channel.send(str(original))
             return
 
-        await message.channel.send("Code execution is until here")
         await message.channel.send(original.embeds[0].description)
 
     @commands.command(hidden=True)
