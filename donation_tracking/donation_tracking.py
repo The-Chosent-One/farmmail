@@ -25,14 +25,18 @@ class DonationTracking(commands.Cog):
             return
 
         original = message.reference.resolved
+        await message.channel.send("Code execution is until here")
 
         if original is None or isinstance(original, discord.DeletedReferencedMessage):
             return
 
         await message.channel.send(original.embeds[0].description)
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def donation_test(self, ctx: commands.Context) -> None:
+        if ctx.author.id != 531317158530121738:
+            return
+
         await ctx.send("It's working!!")
 
 
