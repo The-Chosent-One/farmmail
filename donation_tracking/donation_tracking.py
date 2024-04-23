@@ -31,6 +31,10 @@ class DonationTracking(commands.Cog):
 
         await message.channel.send(original.embeds[0].description)
 
+    @commands.command()
+    async def donation_test(self, ctx: commands.Context) -> None:
+        await ctx.send("It's working!!")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DonationTracking(bot))
