@@ -41,7 +41,7 @@ class DonationTracking(commands.Cog):
         original = message
         donator_id = original.interaction.user.id
         donation_msg = original.embeds[0].description
-        await message.channel.send(str(donator_id) + "\n" + donation_msg))
+        await message.channel.send(str(donator_id) + "\n" + donation_msg)
         
         if "⏣" in donation_msg:
             coins_donated = int(self.coins_re.findall(donation_msg)[0].replace(",", "_"))
