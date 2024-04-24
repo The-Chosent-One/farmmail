@@ -5,6 +5,7 @@ import traceback
 import textwrap
 import discord
 import re
+import traceback
 
 class DonationTracking(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -41,12 +42,13 @@ class DonationTracking(commands.Cog):
         original = message
         donator_id = original.interaction.user.id
         donation_msg = original.embeds[0].description
-        await message.channel.send(str(donator_id) + "\n" + donation_msg)
         
         if "⏣" in donation_msg:
             coins_donated = int(self.coins_re.findall(donation_msg)[0].replace(",", "_"))
-            await message.channel.send(coins_donated)
-            await self.coll.update_one({"user_id": donator_id}, {"$inc", {"dank_coins": coins_donated}}, upsert=True)
+            try:
+                await self.coll.update_one({"user_id": donator_id}, {"$inc", {"dank_coins": coins_donated}}, upsert=True)
+            except Exception as e:
+                await message.channel.send("```\n" + traceback.format_exc() + "```")
             await message.channel.send(f"You have donated ⏣ {coins_donated}... I think")
 
         else:
@@ -54,6 +56,7 @@ class DonationTracking(commands.Cog):
             number_of_items = int(number_of_items.replace(",", "_"))
             await self.coll.update_one({"user_id": donator_id}, {"$inc", {f"items.{item}": number_of_items}}, upsert=True)
             await message.channel.send(f"You have donated {number_of_items} {item}... hopefully")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DonationTracking(bot))
