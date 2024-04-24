@@ -4,11 +4,14 @@ import io
 import traceback
 import textwrap
 import discord
+import re
 
 class DonationTracking(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.coll = bot.plugin_db.get_partition(self)
+        self.coins_re = re.compile(r"\d+(?:,\d+)*")
+        self.items_re = re.compile(r"(\d+(?:,\d+)*).+?: (.*)\*\*")
 
     @commands.Cog.listener("on_message")
     async def donation_track(self, message: discord.Message) -> None:
@@ -18,29 +21,35 @@ class DonationTracking(commands.Cog):
         if message.embeds == []:
             return
 
-        if message.embeds[0].description != "Successfully donated!":
-            return
-
         if message.channel.id != 1022489369954758696:
             return
 
-        original = message.reference.cached_message or message.reference.resolved
-
-        if isinstance(original, discord.DeletedReferencedMessage):
+        if "Are you sure you want to donate your items?" not in message.embeds[0].description:
             return
+            
+        # if message.embeds[0].description != "Successfully donated!":
+        #     return
+        
+        # original = message.reference.cached_message or message.reference.resolved
 
-        if original is None:
-            original = await message.channel.fetch_message(message.reference.message_id)
+        # if isinstance(original, discord.DeletedReferencedMessage):
+        #     return
 
-        await message.channel.send(original.embeds[0].description)
+        # if original is None:
+        #     original = await message.channel.fetch_message(message.reference.message_id)
 
-    @commands.command(hidden=True)
-    async def donation_test(self, ctx: commands.Context) -> None:
-        if ctx.author.id != 531317158530121738:
-            return
+        original = message
+        donator_id = original.interaction.user.id
+        donation_msg = original.embeds[0].description
+        
+        if "⏣" in donation_msg:
+            coins_donated = int(self.coins_re.findall(donation_msg)[0].replace(",", "_"))
+            self.coll.update_one({"user_id": donator_id}, {"$inc", {"dank_coins": coins_donated}}, upsert=True)
 
-        await ctx.send("It's working!!")
-
+        else:
+            number_of_items, item = self.items_re.findall(donation_msg)
+            number_of_items = int(number_of_items.replace(",", "_"))
+            self.coll.update_one({"user_id": donator_id}, {"$inc", {f"items.{item}": number_of_items}}, upsert=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DonationTracking(bot))
