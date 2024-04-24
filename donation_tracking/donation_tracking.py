@@ -24,7 +24,7 @@ class DonationTracking(commands.Cog):
         if message.channel.id != 1022489369954758696:
             return
 
-        if "Are you sure you want to donate your items?" not in message.embeds[0].description:
+        if "Are you sure you want to donate your" not in message.embeds[0].description:
             return
             
         # if message.embeds[0].description != "Successfully donated!":
