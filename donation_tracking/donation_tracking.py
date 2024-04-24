@@ -41,9 +41,11 @@ class DonationTracking(commands.Cog):
         original = message
         donator_id = original.interaction.user.id
         donation_msg = original.embeds[0].description
+        await message.channel.send(str(donator_id) + "\n" + donation_msg))
         
         if "⏣" in donation_msg:
             coins_donated = int(self.coins_re.findall(donation_msg)[0].replace(",", "_"))
+            await message.channel.send(coins_donated)
             await self.coll.update_one({"user_id": donator_id}, {"$inc", {"dank_coins": coins_donated}}, upsert=True)
             await message.channel.send(f"You have donated ⏣ {coins_donated}... I think")
 
