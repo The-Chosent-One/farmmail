@@ -49,6 +49,8 @@ class DonationTracking(commands.Cog):
             await message.channel.send(f"You have donated ⏣ {coins_donated}... I think")
 
         else:
+            number_of_items, item = self.items_re.findall(donation_msg)
+            number_of_items = int(number_of_items.replace(",", "_"))
             await self.coll.update_one({"user_id": donator_id}, {"$inc": {f"items.{item}": number_of_items}}, upsert=True)
             await message.channel.send(f"You have donated {number_of_items} {item}... hopefully")
 
