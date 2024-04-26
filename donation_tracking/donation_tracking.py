@@ -50,7 +50,7 @@ class DonationTracking(commands.Cog):
 
         else:
             try:
-                number_of_items, item = self.items_re.findall(donation_msg)
+                number_of_items, item = self.items_re.findall(donation_msg)[0]
                 number_of_items = int(number_of_items.replace(",", "_"))
                 await self.coll.update_one({"user_id": donator_id}, {"$inc": {f"items.{item}": number_of_items}}, upsert=True)
             except Exception as e:
