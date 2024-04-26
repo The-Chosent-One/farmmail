@@ -12,7 +12,7 @@ class DonationTracking(commands.Cog):
         self.bot = bot
         self.coll = bot.plugin_db.get_partition(self)
         self.coins_re = re.compile(r"\d+(?:,\d+)*")
-        self.items_re = re.compile(r"(\d+(?:,\d+)*).+?: (.*)\*\*")
+        self.items_re = re.compile(r"(\d+(?:,\d+)*).+?> (.*)\*\*")
 
     @commands.Cog.listener("on_message")
     async def donation_track(self, message: discord.Message) -> None:
@@ -49,12 +49,7 @@ class DonationTracking(commands.Cog):
             await message.channel.send(f"You have donated ⏣ {coins_donated}... I think")
 
         else:
-            try:
-                number_of_items, item = self.items_re.findall(donation_msg)
-                number_of_items = int(number_of_items.replace(",", "_"))
-                await self.coll.update_one({"user_id": donator_id}, {"$inc": {f"items.{item}": number_of_items}}, upsert=True)
-            except Exception as e:
-                await message.channel.send("```\n" + traceback.format_exc() + "```")
+            await self.coll.update_one({"user_id": donator_id}, {"$inc": {f"items.{item}": number_of_items}}, upsert=True)
             await message.channel.send(f"You have donated {number_of_items} {item}... hopefully")
 
 
