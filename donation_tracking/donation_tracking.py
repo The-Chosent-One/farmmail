@@ -21,7 +21,7 @@ class Amount(commands.Converter):
         match = AMOUNT_REGEX.search(argument)
 
         if match is None:
-            raise commands.BadArgument("Converting failed")
+            raise commands.BadArgument("That doesn't seem like a number")
 
         amount = match.group(0)
         for suffix, replacement in AMOUNT_MAP.items():
@@ -30,7 +30,7 @@ class Amount(commands.Converter):
         res: int | float = compile(amount, "", "eval").co_consts[0]
 
         if isinstance(res, float) and not res.is_integer():
-            raise commands.BadArgument("Converting failed")
+            raise commands.BadArgument("That doesn't seem like a number")
 
         return int(res)
 
@@ -44,6 +44,9 @@ class DonationTracking(commands.Cog):
 
     async def add_coins(self, donator_id: int, coins: int) -> None:
         await self.coll.update_one({"user_id": donator_id}, {"$inc": {"dank_coins": coins}}, upsert=True)
+
+    async def remove_coins(self, donator_id: int, coins: int) -> None:
+        await self.coll.update_one({"user_id": donator_id}, {"$inc": {"dank_coins": -coins}}, upsert=True)
     
     async def get_coins(self, donator_id: int) -> int | None:
         res = await self.coll.find_one({"user_id": donator_id})
@@ -61,6 +64,12 @@ class DonationTracking(commands.Cog):
 
             if current_coins >= donation_amount:
                 await donator.add_roles(discord.Object(id=role_id))
+
+    async def remove_new_dono_roles(self, donator: discord.Member) -> None:
+        current_coins = await self.get_coins(donator.id)
+        for role_id, donation_amount in DONATION_ROLES.items():
+            if donator._roles.has(role_id) and current_coins < donation_amount:
+                await donator.remove_roles(discord.Object(id=role_id))
     
     @commands.group(invoke_without_command=True, aliases=["dd"])
     async def dankdonor(self, ctx: commands.Context) -> None:
@@ -77,6 +86,17 @@ class DonationTracking(commands.Cog):
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
         await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}")
+    
+    @dankdonor.command()
+    @commands.check_any(
+        checks.has_permissions(PermissionLevel.MODERATOR),
+        commands.has_role(855877108055015465) # Giveaway Manager
+    )
+    async def remove(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
+        """Remove a donation amount from a member."""
+        await self.remove_coins(donator.id, amount)
+        await self.remove_new_dono_roles(donator)
+        await ctx.reply(f"Removed **⏣ {amount:,}** from {donator.name}")
     
     @dankdonor.command()
     async def view(self, ctx: commands.Context, member: discord.Member = None) -> None:
