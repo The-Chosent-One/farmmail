@@ -21,6 +21,22 @@ class DonationTracking(commands.Cog):
             return None
         
         return res["dank_coins"]
+
+    async def add_new_dono_roles(self, donator: discord.Member) -> None:
+        donation_roles = {
+            1232708197035278468: 250_000_000,
+            1232711148948947046: 500_000_000,
+            1232711366775930961: 1_000_000_000,
+            1232711901675389050: 2_500_000_000,
+        }
+
+        current_coins = await self.get_coins(donator.id)
+        for role_id, donation_amount in donation_roles.items():
+            if donator._roles.has(role_id):
+                continue
+
+            if current_coins >= donation_amount:
+                await donator.add_roles(discord.Object(id=role_id))
     
     @commands.group(invoke_without_command=True, aliases=["dd"])
     async def dankdonor(self, ctx: commands.Context) -> None:
@@ -29,13 +45,14 @@ class DonationTracking(commands.Cog):
     
     @dankdonor.command()
     @commands.check_any(
-        checks.has_permissions(PermissionLevel.ADMIN),
+        checks.has_permissions(PermissionLevel.MODERATOR),
         commands.has_role(855877108055015465) # Giveaway Manager
     )
-    async def add(self, ctx: commands.Context, member: discord.Member, amount: int) -> None:
+    async def add(self, ctx: commands.Context, donator: discord.Member, amount: int) -> None:
         """Add a dank donation to a member."""
-        await self.add_coins(member.id, amount)
-        await ctx.reply(f"Added **⏣ {amount:, }** to {member.name}")
+        await self.add_coins(donator.id, amount)
+        await self.add_new_dono_roles(donator)
+        await ctx.reply(f"Added **⏣ {amount:, }** to {donator.name}")
     
     @dankdonor.command()
     async def view(self, ctx: commands.Context, member: discord.Member = None) -> None:
