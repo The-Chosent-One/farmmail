@@ -71,8 +71,11 @@ class DonationTracking(commands.Cog):
             if donator._roles.has(role_id) and current_coins < donation_amount:
                 await donator.remove_roles(discord.Object(id=role_id))
 
-    def get_donation_embed(self, donator_name: str, amount: int) -> discord.Embed:
-        donation = discord.Embed(title=f"{donator_name}'s donation", description=f"> Total donations: **⏣ {amount:,}**", colour=0x5865f2)
+    async def get_donation_embed(self, donator: discord.Member, amount: int = None) -> discord.Embed:
+        if amount is None:
+            amount = await self.get_coins(donator.id)
+
+        donation = discord.Embed(title=f"{donator.name}'s donation", description=f"> Total donations: **⏣ {amount:,}**", colour=0x5865f2)
         donation.set_footer(text="Thank you for donating!")
 
         return donation
@@ -89,7 +92,7 @@ class DonationTracking(commands.Cog):
     )
     async def add(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
         """Add a dank donation to a member."""
-        donation = self.get_donation_embed(donator.name, amount)
+        donation = await self.get_donation_embed(donator)
         
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
@@ -110,7 +113,7 @@ class DonationTracking(commands.Cog):
         if amount > current_amount:
             return await ctx.reply(f"{donator.name} does not have that much to remove")
 
-        donation = self.get_donation_embed(donator.name, amount)
+        donation = await self.get_donation_embed(donator, amount=current_amount-amount)
         
         await self.remove_coins(donator.id, amount)
         await self.remove_new_dono_roles(donator)
@@ -127,7 +130,7 @@ class DonationTracking(commands.Cog):
         if amount is None:
             return await ctx.reply(f"{target.name} has not donated yet")
 
-        donation = self.get_donation_embed(target.name, amount)
+        donation = await self.get_donation_embed(target, amount=amount)
         await ctx.reply(embed=donation)
 
 
