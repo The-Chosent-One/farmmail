@@ -52,7 +52,7 @@ class DonationTracking(commands.Cog):
         """Add a dank donation to a member."""
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
-        await ctx.reply(f"Added **⏣ {amount:, }** to {donator.name}")
+        await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}")
     
     @dankdonor.command()
     async def view(self, ctx: commands.Context, member: discord.Member = None) -> None:
