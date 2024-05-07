@@ -7,7 +7,7 @@ import re
 
 AMOUNT_MAP = {"k": "*1000", "m": "*1000000", "b": "*1000000000"}
 AMOUNT_REGEX = re.compile(
-    rf"^\d+(?:\.\d+)?[{''.join(AMOUNT_MAP}]?$"
+    rf"^\d+(?:\.\d+)?[{''.join(AMOUNT_MAP)}]?$"
 )
 DONATION_ROLES = {
     1232708197035278468: 250_000_000,
