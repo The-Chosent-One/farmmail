@@ -94,7 +94,7 @@ class DonationTracking(commands.Cog):
     )
     async def remove(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
         """Remove a donation amount from a member."""
-        current_amount = await self.get_coins(doantor.id)
+        current_amount = await self.get_coins(donator.id)
 
         if current_amount is None:
             return await ctx.reply(f"{donator.name} has not donated anything yet")
