@@ -1,5 +1,6 @@
-from discord.ext import commands
 import discord
+from discord.ext import commands
+from core import checks
 from core.models import PermissionLevel
 
 class DonationTracking(commands.Cog):
@@ -28,7 +29,7 @@ class DonationTracking(commands.Cog):
     
     @dankdonor.command()
     @commands.check_any(
-        commands.checks.has_permissions(PermissionLevel.ADMIN),
+        checks.has_permissions(PermissionLevel.ADMIN),
         commands.has_role(855877108055015465) # Giveaway Manager
     )
     async def add(self, ctx: commands.Context, member: discord.Member, amount: int) -> None:
