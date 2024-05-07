@@ -70,6 +70,12 @@ class DonationTracking(commands.Cog):
         for role_id, donation_amount in DONATION_ROLES.items():
             if donator._roles.has(role_id) and current_coins < donation_amount:
                 await donator.remove_roles(discord.Object(id=role_id))
+
+    def get_donation_embed(self, donator_name: str, amount: int) -> discord.Embed:
+        donation = discord.Embed(title=f"{donator_name}'s donation", description=f"> Total donations: **⏣ {amount:,}**", colour=0x5865f2)
+        donation.set_footer(text="Thank you for donating!")
+
+        return donation
     
     @commands.group(invoke_without_command=True, aliases=["dd"])
     async def dankdonor(self, ctx: commands.Context) -> None:
@@ -83,9 +89,11 @@ class DonationTracking(commands.Cog):
     )
     async def add(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
         """Add a dank donation to a member."""
+        donation = self.get_donation_embed(donator.name, amount)
+        
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
-        await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}")
+        await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}", embed=donation)
     
     @dankdonor.command()
     @commands.check_any(
@@ -101,10 +109,12 @@ class DonationTracking(commands.Cog):
 
         if amount > current_amount:
             return await ctx.reply(f"{donator.name} does not have that much to remove")
+
+        donation = self.get_donation_embed(donator.name, amount)
         
         await self.remove_coins(donator.id, amount)
         await self.remove_new_dono_roles(donator)
-        await ctx.reply(f"Removed **⏣ {amount:,}** from {donator.name}")
+        await ctx.reply(f"Removed **⏣ {amount:,}** from {donator.name}", embed=donation)
     
     @dankdonor.command()
     async def view(self, ctx: commands.Context, member: discord.Member = None) -> None:
@@ -117,8 +127,7 @@ class DonationTracking(commands.Cog):
         if amount is None:
             return await ctx.reply(f"{target.name} has not donated yet")
 
-        donation = discord.Embed(title=f"{target.name}'s donation", description=f"> Donated: **⏣ {amount:,}**", colour=0x5865f2)
-        donation.set_footer(text="Thank you for donating!")
+        donation = self.get_donation_embed(target.name, amount)
         await ctx.reply(embed=donation)
 
 
