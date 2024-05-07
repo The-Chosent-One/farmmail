@@ -92,10 +92,10 @@ class DonationTracking(commands.Cog):
     )
     async def add(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
         """Add a dank donation to a member."""
-        donation = await self.get_donation_embed(donator)
-        
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
+        
+        donation = await self.get_donation_embed(donator)
         await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}", embed=donation)
     
     @dankdonor.command()
