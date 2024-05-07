@@ -52,6 +52,7 @@ class Snipe(commands.Cog):
         commands.has_role("Farm Manager - Server Admin"),
         commands.has_role("Level 20"),
         commands.has_role(753210431983583302),  # Secret Supporter
+        commands.has_role(1232711148948947046), # 500M Donor
     )
     @commands.command()
     async def snipe(self, ctx, *, channel: discord.TextChannel = None):
@@ -103,6 +104,7 @@ class Snipe(commands.Cog):
         commands.has_role("Farm Manager - Server Admin"),
         commands.has_role("Level 20"),
         commands.has_role(753210431983583302),  # Secret Supporter
+        commands.has_role(1232711148948947046), # 500M Donor
     )
     @commands.command()
     async def esnipe(self, ctx, *, channel: discord.TextChannel = None):
