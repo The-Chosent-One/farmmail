@@ -1,61 +1,55 @@
 from discord.ext import commands
-from contextlib import redirect_stdout
-import io
-import traceback
-import textwrap
 import discord
-import re
-import traceback
+from core.models import PermissionLevel
 
 class DonationTracking(commands.Cog):
+    """
+    Keeps track of dank doantions for members
+    """
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.coll = bot.plugin_db.get_partition(self)
-        self.coins_re = re.compile(r"\d+(?:,\d+)*")
-        self.items_re = re.compile(r"(\d+(?:,\d+)*).+?> (.*)\*\*")
 
-    @commands.Cog.listener("on_message")
-    async def donation_track(self, message: discord.Message) -> None:
-        if message.author.id != 270904126974590976:
-            return
+    async def add_coins(self, donator_id: int, coins: int) -> None:
+        await self.coll.update_one({"user_id": donator_id}, {"$inc": {"dank_coins": coins}}, upsert=True)
+    
+    async def get_coins(self, donator_id: int) -> int | None:
+        res = await self.coll.find_one({"user_id": donator_id})
 
-        if message.embeds == []:
-            return
-
-        if message.channel.id != 1022489369954758696:
-            return
-
-        if "Are you sure you want to donate your" not in message.embeds[0].description:
-            return
-            
-        # if message.embeds[0].description != "Successfully donated!":
-        #     return
+        if res is None:
+            return None
         
-        # original = message.reference.cached_message or message.reference.resolved
+        return res["dank_coins"]
+    
+    @commands.group(invoke_without_command=True, aliases=["dd"])
+    async def dankdonor(self, ctx: commands.Context) -> None:
+        """Dank donation commands."""
+        return
+    
+    @dankdonor.command()
+    @commands.check_any(
+        commands.checks.has_permissions(PermissionLevel.ADMIN),
+        commands.has_role(855877108055015465) # Giveaway Manager
+    )
+    async def add(self, ctx: commands.Context, member: discord.Member, amount: int) -> None:
+        """Add a dank donation to a member."""
+        await self.add_coins(member.id, amount)
+        await ctx.reply(f"Added **⏣ {amount:, }** to {member.name}")
+    
+    @dankdonor.command()
+    async def view(self, ctx: commands.Context, member: discord.Member = None) -> None:
+        """View dank donations of a member."""
+        target = member or ctx.author
+        donator_id = target.id
 
-        # if isinstance(original, discord.DeletedReferencedMessage):
-        #     return
+        amount = await self.get_coins(donator_id)
 
-        # if original is None:
-        #     original = await message.channel.fetch_message(message.reference.message_id)
+        if amount is None:
+            return await ctx.reply(f"{target.name} has not donated yet")
 
-        original = message
-        donator_id = original.interaction.user.id
-        donation_msg = original.embeds[0].description
-        
-        if "⏣" in donation_msg:
-            coins_donated = int(self.coins_re.findall(donation_msg)[0].replace(",", "_"))
-            await self.coll.update_one({"user_id": donator_id}, {"$inc": {"dank_coins": coins_donated}}, upsert=True)
-            await message.channel.send(f"You have donated ⏣ {coins_donated}... I think")
-
-        else:
-            try:
-                number_of_items, item = self.items_re.findall(donation_msg)[0]
-                number_of_items = int(number_of_items.replace(",", "_"))
-                await self.coll.update_one({"user_id": donator_id}, {"$inc": {f"items.{item}": number_of_items}}, upsert=True)
-            except Exception as e:
-                await message.channel.send("```\n" + traceback.format_exc() + "```")
-            await message.channel.send(f"You have donated {number_of_items} {item}... hopefully")
+        donation = discord.Embed(title=f"{target.name}'s donation", description=f"> Donated: **⏣ {amount:,}**", colour=0x5865f2)
+        donation.set_footer(text="Thank you for donating!")
+        await ctx.reply(embed=donation)
 
 
 async def setup(bot: commands.Bot):
