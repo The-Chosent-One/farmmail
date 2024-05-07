@@ -2,6 +2,37 @@ import discord
 from discord.ext import commands
 from core import checks
 from core.models import PermissionLevel
+import re
+
+
+AMOUNT_MAP = {"k": "*1000", "m": "*1000000", "b": "*1000000000"}
+AMOUNT_REGEX = re.compile(
+    rf"^\d+(?:\.\d+)?[{''.join(AMOUNT_MAP}]?$"
+)
+DONATION_ROLES = {
+    1232708197035278468: 250_000_000,
+    1232711148948947046: 500_000_000,
+    1232711366775930961: 2_500_000_000,
+    1232711901675389050: 5_000_000_000,
+}
+
+class Amount(commands.Converter):
+    async def convert(self, ctx: commands.Context, argument: str) -> int:
+        match = AMOUNT_REGEX.search(argument)
+
+        if match is None:
+            raise commands.BadArgument("Converting failed")
+
+        amount = match.group(0)
+        for suffix, replacement in AMOUNT_MAP.items():
+            amount = amount.replace(suffix, replacement)
+
+        res: int | float = compile(amount, "", "eval").co_consts[0]
+
+        if isinstance(res, float) and not res.is_integer():
+            raise commands.BadArgument("Converting failed")
+
+        return int(res)
 
 class DonationTracking(commands.Cog):
     """
@@ -23,15 +54,8 @@ class DonationTracking(commands.Cog):
         return res["dank_coins"]
 
     async def add_new_dono_roles(self, donator: discord.Member) -> None:
-        donation_roles = {
-            1232708197035278468: 250_000_000,
-            1232711148948947046: 500_000_000,
-            1232711366775930961: 2_500_000_000,
-            1232711901675389050: 5_000_000_000,
-        }
-
         current_coins = await self.get_coins(donator.id)
-        for role_id, donation_amount in donation_roles.items():
+        for role_id, donation_amount in DONATION_ROLES.items():
             if donator._roles.has(role_id):
                 continue
 
@@ -48,7 +72,7 @@ class DonationTracking(commands.Cog):
         checks.has_permissions(PermissionLevel.MODERATOR),
         commands.has_role(855877108055015465) # Giveaway Manager
     )
-    async def add(self, ctx: commands.Context, donator: discord.Member, amount: int) -> None:
+    async def add(self, ctx: commands.Context, donator: discord.Member, Amount: int) -> None:
         """Add a dank donation to a member."""
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
