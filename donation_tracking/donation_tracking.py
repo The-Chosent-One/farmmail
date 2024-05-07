@@ -72,7 +72,7 @@ class DonationTracking(commands.Cog):
         checks.has_permissions(PermissionLevel.MODERATOR),
         commands.has_role(855877108055015465) # Giveaway Manager
     )
-    async def add(self, ctx: commands.Context, donator: discord.Member, Amount: int) -> None:
+    async def add(self, ctx: commands.Context, donator: discord.Member, amount: Amount) -> None:
         """Add a dank donation to a member."""
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
