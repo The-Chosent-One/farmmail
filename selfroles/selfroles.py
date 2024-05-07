@@ -90,7 +90,7 @@ class SelfRoles(commands.Cog):
         author_roles = set(interaction.user._roles)
 
         # Heist Leader, Giveaway Manager, Farmer, Double Booster, Partner Manager, Farm Manager, Level 25,
-        # $20 Donator, Farm Owner, Daughter
+        # $20 Donator, Farm Owner, Daughter, 500M Donor
         premium_role_req = {
             719012715204444181,
             790290355631292467,
@@ -102,6 +102,7 @@ class SelfRoles(commands.Cog):
             658770586540965911,
             794301389769015316,
             732497481358770186,
+            1232711148948947046,
         }
 
         # removing premium colours if they don't have the required role(s)
