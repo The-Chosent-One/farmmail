@@ -133,6 +133,19 @@ class DonationTracking(commands.Cog):
         donation = await self.get_donation_embed(target, amount=amount)
         await ctx.reply(embed=donation)
 
+    @dankdonor.command(aliases=["lb"])
+    async def leaderboard(self, ctx: commands.Context) -> None:
+        """View the top donors in The Farm."""
+        res = await self.coll.find().sort({"dank_coins": -1}).to_list(10)
+
+        embed = discord.Embed(title="Top 10 donors in The Farm", description="", colour=0x5865f2)
+
+        for number, entry in enumerate(res, start=1):
+            user_id, donated = entry["user_id"], entry["dank_coins"]
+            embed.description += f"{number}) <@{user_id}> - **⏣ {donated:,}**\n"
+        
+        await ctx.reply(embed=embed)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DonationTracking(bot))
