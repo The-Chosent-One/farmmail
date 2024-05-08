@@ -142,7 +142,13 @@ class DonationTracking(commands.Cog):
 
         for number, entry in enumerate(res, start=1):
             user_id, donated = entry["user_id"], entry["dank_coins"]
-            embed.description += f"{number}) <@{user_id}> - **⏣ {donated:,}**\n"
+            medals = {1: ":first_place:", 2: ":second_place:", 3: ":third_place:"}
+    
+            if number in medals:
+                embed.description += f"{medals[number]} "
+            else:
+                embed.description += f"{number}) "
+            embed.description += f"<@{user_id}> - **⏣ {donated:,}**\n"
         
         await ctx.reply(embed=embed)
 
