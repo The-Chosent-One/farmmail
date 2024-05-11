@@ -1,6 +1,7 @@
 from typing import Sequence
 from discord.ext import commands
 from core.models import PermissionLevel
+from core import checks
 import discord
 from .selfroles_data import (
     REGULAR_COLOURS,
