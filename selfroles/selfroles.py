@@ -1,5 +1,6 @@
 from typing import Sequence
 from discord.ext import commands
+from core.models import PermissionLevel
 import discord
 from .selfroles_data import (
     REGULAR_COLOURS,
@@ -146,6 +147,7 @@ class SelfRoles(commands.Cog):
         return True
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_colour_embed(self, ctx: commands.Context):
         embed = discord.Embed(
             description="**COLOUR ROLES**\nClick the buttons below to select a colour of your choice.",
@@ -155,6 +157,7 @@ class SelfRoles(commands.Cog):
         await ctx.send(embed=embed, view=self.colour_view)
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_access_embed(self, ctx: commands.Context):
         embed = RoleHelper.get_embed(
             ACCESS,
@@ -219,6 +222,7 @@ class SelfRoles(commands.Cog):
         return True
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_ping_embed(self, ctx: commands.Context):
         embed = RoleHelper.get_embed(
             PING,
@@ -242,6 +246,7 @@ class SelfRoles(commands.Cog):
         return True
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_region_embed(self, ctx: commands.Context) -> None:
         embed = RoleHelper.get_embed(
             REGION,
@@ -264,6 +269,7 @@ class SelfRoles(commands.Cog):
         return True
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_age_embed(self, ctx: commands.Context) -> None:
         embed = RoleHelper.get_embed(
             AGE,
@@ -285,6 +291,7 @@ class SelfRoles(commands.Cog):
         return True
 
     @commands.command()
+    @checks.has_permissions(PermissionLevel.ADMIN)
     async def send_gender_embed(self, ctx: commands.Context) -> None:
         embed = RoleHelper.get_embed(
             GENDER,
