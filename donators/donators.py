@@ -1,26 +1,115 @@
 import discord
 from discord.ext import commands
 from discord.ext import tasks
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import re
 
 from core import checks
 from core.models import PermissionLevel
+from core.paginator import EmbedPaginatorSession
 
+class PerkButton(discord.ui.Button):
+    def __init__(self, *, label, disabled, emoji = None):
+        style = discord.ButtonStyle.gray if disabled else discord.ButtonStyle.success
+        super().__init__(style=style, label=label, disabled=disabled, emoji=emoji, row=0)
+
+    async def callback(self, interaction: discord.Interaction):
+        return await super().callback(interaction)
+
+class RedemptionView(discord.ui.View):
+    def __init__(self, *, ctx: commands.Context, user_id: int, perks_unlocked: list[int]):
+        super().__init__(timeout=180)
+        self.context = ctx
+        self.user_id = user_id
+        self.add_buttons(perks_unlocked)
+    
+    def add_buttons(self, perks_unlocked: list[int]) -> None:
+       for perk in (5, 10, 20, 30):
+           disabled = perk not in perks_unlocked
+           self.add_item(PerkButton(label=f"${perk}", disabled=disabled))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("That's not your buttons")
+            return False
+
+        return True
+
+    async def on_timeout(self) -> None:
+        return await super().on_timeout()
 
 class Donators(commands.Cog):
     """
     Manage cash donator perks
     """
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.coll = bot.plugin_db.get_partition(self)
         self.check_expiry.start()
         self.channel_check.start()
         self.update_vcs.start()
         self.top10_roles.start()
+
+    async def get_details(self, donator_id: int) -> dict | None:
+        return await self.coll.find_one({"user_id": donator_id})
+    
+    async def add_donation(self, donator_id: int, amount: int, proof: str) -> None:
+        await self.coll.update_one(
+            {"user_id": donator_id},
+            {
+                "$inc": {"balance": amount, "total_donated": amount},
+                "$push": {
+                    "Donation": {
+                        "Value": amount,
+                        "Date": datetime.now(timezone.utc),
+                        "Proof": proof,
+                    }
+                },
+                "$setOnInsert": {
+                    "expiry": "None",
+                    "perk_name": "None",
+                    "channel_id": "None"
+                }
+            },
+            upsert=True,
+        )
+    
+    async def remove_donation(self, donator_id: int, amount: int, proof: str) -> None:
+        amount = -abs(amount)
+        await self.coll.update_one(
+            {"user_id": donator_id},
+            {
+                "$inc": {"balance": amount, "total_donated": amount},
+                "$push": {
+                    "Donation": {
+                        "Value": amount,
+                        "Date": datetime.now(timezone.utc),
+                        "Proof": proof,
+                    }
+                },
+            }
+        )
+
+    def add_donation_details(self, embed: discord.Embed, donation_info: dict) -> None:
+        # Adds the details to the embed itself
+        balance, total_donated, perk_level = donation_info["balance"], donation_info["total_donated"], donation_info["perk_name"]
+        exp = None
+
+        if (expiry := donation_info["expiry"]) != "None":
+            timestamp = round(datetime.timestamp(expiry))
+            exp = f"<t:{timestamp}:f>"
+            
+        embed.add_field(
+            name="Total Donated:", value=f"${total_donated}", inline=True
+        ).add_field(
+            name="Balance:", value=f"${balance}", inline=True
+        ).add_field(
+            name="Perks Redeemed", value=perk_level, inline=True
+        ).add_field(
+            name="Expiry", value=exp, inline=True
+        )
 
     async def confirm(
         self,
@@ -164,537 +253,201 @@ class Donators(commands.Cog):
         return True
 
     @commands.group(invoke_without_command=True)
-    async def donator(self, ctx):
+    async def donator(self, ctx: commands.Context):
         """
         Donator commands.
         """
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="Donator Commands", color=0x10EA64)
-            embed.add_field(
-                name="`donator add`",
-                value="Adds a donation value to a member",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator remove`",
-                value="Removes a donation value from a member",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator balance`",
-                value="Shows the balance of the member.",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator details`",
-                value="Shows the details of a members donations.",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator redeem`",
-                value="Redeems the requested perk",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator leaderboard`",
-                value="Shows the donation leaderboard",
-                inline=False,
-            )
-
-            await ctx.send(embed=embed)
+        return
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
-    async def add(self, ctx, member: discord.Member, amount: int, proof):
+    async def add(self, ctx: commands.Context, member: discord.Member, amount: int, proof):
         """
         Adds the donated value to the member.
         """
-        check = await self.coll.find_one({"user_id": member.id})
-        if check:
-            balance = check["balance"]
-            totdonated = check["total_donated"]
-            total = balance + amount
-            await self.coll.update_one(
-                {"user_id": member.id},
-                {
-                    "$set": {"balance": total, "total_donated": totdonated + amount},
-                    "$push": {
-                        "Donation": {
-                            "Value": amount,
-                            "Date": datetime.utcnow(),
-                            "Proof": proof,
-                        }
-                    },
-                },
-            )
-            perk_level = check["perk_name"]
-            expiry = check["expiry"]
-            if expiry != "None":
-                timestamp = round(datetime.timestamp(expiry))
-                exp = f"<t:{timestamp}:f>"
-            else:
-                exp = "None"
-            embed = discord.Embed(
-                title="**Amount added**",
-                description=f"{member.mention} has had ${amount} added to their balance.",
-                color=0x10EA64,
-            )
-            embed.add_field(
-                name="Total Donated:", value=f"${totdonated + amount}", inline=True
-            )
-            embed.add_field(name="Balance:", value=f"${total}", inline=True)
-            embed.add_field(name="Perks Redeemed", value=f"{perk_level}", inline=True)
-            embed.add_field(name="Expiry", value=exp, inline=True)
-            await ctx.send(embed=embed)
-            if self.channel_check.is_running():
-                self.channel_check.restart()
-            else:
-                self.channel_check.start()
-            if self.update_vcs.is_running():
-                self.update_vcs.restart()
-            else:
-                self.update_vcs.start()
-            if self.top10_roles.is_running():
-                self.top10_roles.restart()
-            else:
-                self.top10_roles.start()
+        await self.add_donation(member.id, amount, proof)
+        donation_info = await self.get_details(member.id)
+        
+        embed = discord.Embed(
+            title="**Amount added**",
+            description=f"{member.mention} has had ${amount} added to their balance.",
+            color=0x5865F2,
+        )
+
+        await self.add_donation_details(embed, donation_info)
+        await ctx.reply(embed=embed)
+        
+        if self.channel_check.is_running():
+            self.channel_check.restart()
         else:
-            await self.coll.insert_one(
-                {
-                    "user_id": member.id,
-                    "balance": amount,
-                    "total_donated": amount,
-                    "perk_name": "None",
-                    "expiry": "None",
-                    "Donation": [
-                        {"Value": amount, "Date": datetime.utcnow(), "Proof": proof}
-                    ],
-                    "channel_id": "None",
-                }
-            )
-            check = await self.coll.find_one({"user_id": member.id})
-            perk_level = check["perk_name"]
-            expiry = check["expiry"]
-            if expiry != "None":
-                timestamp = round(datetime.timestamp(expiry))
-                exp = f"<t:{timestamp}:f>"
-            else:
-                exp = "None"
-            totdonated = check["total_donated"]
-            embed = discord.Embed(
-                title="**Amount added**",
-                description=f"{member.mention} has had ${amount} added to their balance.",
-                color=0x10EA64,
-            )
-            embed.add_field(name="Total Donated:", value=f"${totdonated}", inline=True)
-            embed.add_field(name="Balance:", value=f"${amount}", inline=True)
-            embed.add_field(name="Perks Redeemed", value=f"{perk_level}", inline=True)
-            embed.add_field(name="Expiry", value=exp, inline=True)
-            await ctx.send(embed=embed)
-            if self.channel_check.is_running():
-                self.channel_check.restart()
-            else:
-                self.channel_check.start()
-            if self.update_vcs.is_running():
-                self.update_vcs.restart()
-            else:
-                self.update_vcs.start()
-            if self.top10_roles.is_running():
-                self.top10_roles.restart()
-            else:
-                self.top10_roles.start()
+            self.channel_check.start()
+
+        if self.update_vcs.is_running():
+            self.update_vcs.restart()
+        else:
+            self.update_vcs.start()
+
+        if self.top10_roles.is_running():
+            self.top10_roles.restart()
+        else:
+            self.top10_roles.start()
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
-    async def remove(self, ctx, member: discord.Member, amount: int):
+    async def remove(self, ctx: commands.Context, member: discord.Member, amount: int):
         """
         Removes the donated value from the member.
         """
-        check = await self.coll.find_one({"user_id": member.id})
-        if check:
-            balance = check["balance"]
-            totdonated = check["total_donated"]
-            if balance < amount:
-                return await ctx.send("How do you plan to remove more than they have?")
-            total = balance - amount
-            url = ctx.message.jump_url
-            await self.coll.update_one(
-                {"user_id": member.id},
-                {
-                    "$set": {"balance": total, "total_donated": totdonated - amount},
-                    "$push": {
-                        "Donation": {
-                            "Value": -abs(amount),
-                            "Date": datetime.utcnow(),
-                            "Proof": url,
-                        }
-                    },
-                },
-            )
-            perk_level = check["perk_name"]
-            expiry = check["expiry"]
-            if expiry != "None":
-                timestamp = round(datetime.timestamp(expiry))
-                exp = f"<t:{timestamp}:f>"
-            else:
-                exp = "None"
-            embed = discord.Embed(
-                title="**Amount removed**",
-                description=f"{member.mention} has had ${amount} removed from their balance.",
-                color=0xFB0404,
-            )
-            embed.add_field(
-                name="Total Donated:", value=f"${totdonated - amount}", inline=True
-            )
-            embed.add_field(name="Balance:", value=f"${total}", inline=True)
-            embed.add_field(name="Perks Redeemed", value=f"{perk_level}", inline=True)
-            embed.add_field(name="Expiry", value=exp, inline=True)
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"{member.mention} is not a donator yet and has no balance.")
+        donation_info = await self.get_details(member.id)
+
+        if donation_info is None:
+            return await ctx.reply(f"{member.name} is not a donator yet and has no balance.")
+
+        if donation_info["balance"] < amount:
+            return await ctx.reply("How do you plan to remove more than they have?")
+        
+        url = ctx.message.jump_url
+        await self.remove_donation(member.id, amount, url)
+
+        embed = discord.Embed(
+            title="**Amount removed**",
+            description=f"{member.mention} has had ${amount} removed from their balance.",
+            color=0x5865F2,
+        )
+
+        self.add_donation_details(embed)
+        await ctx.reply(embed=embed)
 
     @donator.command(name="balance")
     @checks.has_permissions(PermissionLevel.MODERATOR)
-    async def _balance(self, ctx, member: discord.Member):
+    async def _balance(self, ctx: commands.Context, member: discord.Member):
         """
         Shows the balance of the member.
         """
-        check = await self.coll.find_one({"user_id": member.id})
-        if check:
-            totdonated = check["total_donated"]
-            balance = check["balance"]
-            perk_level = check["perk_name"]
-            expiry = check["expiry"]
-            if expiry != "None":
-                timestamp = round(datetime.timestamp(expiry))
-                exp = f"<t:{timestamp}:f>"
-            else:
-                exp = "None"
-            embed = discord.Embed(
-                title="**Balance**",
-                description=f"If you are looking for details, use `??donator details {member.id}`.",
-                color=0x10EA64,
-            )
-            embed.add_field(name="Total Donated:", value=f"${totdonated}", inline=True)
-            embed.add_field(name="Balance:", value=f"${balance}", inline=True)
-            embed.add_field(name="Perks Redeemed", value=f"{perk_level}", inline=True)
-            embed.add_field(name="Expiry", value=exp, inline=True)
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"{member.mention} is not a donator yet and has no balance.")
+        donation_info = await self.get_details(member.id)
 
-    @commands.Cog.listener("on_raw_reaction_add")
-    @commands.Cog.listener("on_raw_reaction_remove")
-    async def detailed_donation_pagination(
-        self, payload: discord.RawReactionActionEvent
-    ) -> None:
-        if str(payload.emoji) not in ("\U000025c0", "\U000025b6"):
-            return
+        if donation_info is None:
+            return await ctx.reply(f"{member.name} is not a donator yet and has no balance.")
 
-        if payload.member and payload.member.bot:
-            return
-
-        message = await self.bot.get_channel(payload.channel_id).fetch_message(
-            payload.message_id
+        embed = discord.Embed(
+            title="**Balance**",
+            description=f"If you are looking for details, use `??donator details {member.id}`.",
+            color=0x5865F2,
         )
-
-        if not message.embeds:
-            return
-
-        if "Detailed Donations" in message.embeds[0].title:
-            return self.bot.dispatch("update_detailed_donations", message, payload)
-
-    @commands.Cog.listener("on_update_detailed_donations")
-    async def update_detailed_donation(
-        self, message: discord.Message, payload: discord.RawReactionActionEvent
-    ) -> None:
-        embed = message.embeds[0]
-        page_number, user_id = map(int, re.findall(r"\d+", embed.footer.text))
-        page_add = str(payload.emoji) == "\U000025b6"
-
-        if page_number == 1 and not page_add:
-            return
-
-        offset = (page_number - 2) * 10
-        if page_add:
-            offset = page_number * 10
-
-        user_info = await self.coll.find_one({"user_id": user_id})
-        donation_info = user_info["Donation"]
-
-        if len(donation_info) < offset:
-            return
-
-        embed.description = ""
-
-        for entry in donation_info[offset : min(len(donation_info), offset + 10)]:
-            date, value, proof = entry["Date"], entry["Value"], entry["Proof"]
-            timestamp = round(datetime.timestamp(date))
-
-            embed.description += f"<t:{timestamp}:f> - [${value}]({proof})\n"
-
-        embed.set_footer(
-            text=f"Page: {page_number + (-1) ** (page_add + 1)}, id: {user_id}"
-        )
-        await message.edit(embed=embed)
+        
+        self.add_donation_details(embed, donation_info)
+        await ctx.send(embed=embed)
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.MODERATOR)
-    async def details(self, ctx, member: discord.Member):
+    async def details(self, ctx: commands.Context, member: discord.Member):
         """Shows details of each donation"""
-        user_info = await self.coll.find_one({"user_id": member.id})
+        donation_info = await self.get_details(member.id)
 
-        if not user_info:
-            return await ctx.send(
-                f"{member.mention} is not a donator yet and has no balance."
+        if donation_info is None:
+            return await ctx.reply(f"{member.name} is not a donator yet and has no balance.")
+        
+        donations = donation_info["Donation"]
+
+        chunks = [donations[i:i+10] for i in range(0, len(donations), 10)]
+        embeds = []
+
+        for batch in chunks:
+            embed = discord.Embed(
+                title=f"**{member.name}'s detailed donations**",
+                description="",
+                color=0x5865F2,
             )
 
-        embed = discord.Embed(
-            title=f"**{member.name} Detailed Donations**",
-            description="",
-            color=0x10EA64,
-        )
+            for entry in batch:
+                date, value, proof = entry["Date"], entry["Value"], entry["Proof"]
+                timestamp = round(datetime.timestamp(date))
 
-        for entry in user_info["Donation"][:10]:
-            date, value, proof = entry["Date"], entry["Value"], entry["Proof"]
-            timestamp = round(datetime.timestamp(date))
+                embed.description += f"<t:{timestamp}:f> - [${value}]({proof})\n"
+            
+            embeds.append(embed)
 
-            embed.description += f"<t:{timestamp}:f> - [${value}]({proof})\n"
-
-        embed.set_footer(text=f"Page: 1, id: {member.id}")
-        message = await ctx.send(embed=embed)
-        await message.add_reaction("\U000025c0")
-        await message.add_reaction("\U000025b6")
+        session = EmbedPaginatorSession(ctx, *embeds)
+        await session.run()
 
     @donator.command()
-    async def redeem(self, ctx, perk_level=None):
+    async def redeem(self, ctx: commands.Context):
         """
         Redeem perks from balance
         """
-        check = await self.coll.find_one({"user_id": ctx.author.id})
-        if check:
-            balance = check["balance"]
-            perkname = check["perk_name"]
-            totdonated = check["total_donated"]
-            if perk_level is None:
-                return await ctx.send(
-                    "Please specify a perk level. `$5`, `$10`, `$20`, `$30`"
-                )
-            if perkname != "None":
-                await ctx.send(
-                    "You have already redeemed a perk. Please wait for it to expire."
-                )
-            elif perk_level == "$5":
-                if balance >= 5:
-                    agreed = await self.confirm(
-                        ctx,
-                        ctx.author,
-                        balance,
-                        5,
-                        perk_level,
-                        15,
-                        totdonated,
-                        ctx.message.jump_url,
-                    )
-                    if agreed:
-                        donator5 = ctx.guild.get_role(794300647137738762)
-                        await ctx.author.add_roles(donator5)
-                    else:
-                        return
-                else:
-                    await ctx.send(
-                        "You do not have enough balance to redeem this perk."
-                    )
-            elif perk_level == "$10":
-                if balance >= 10:
-                    agreed = await self.confirm(
-                        ctx,
-                        ctx.author,
-                        balance,
-                        10,
-                        perk_level,
-                        30,
-                        totdonated,
-                        ctx.message.jump_url,
-                    )
-                    if agreed:
-                        donator10 = ctx.guild.get_role(794301192359378954)
-                        donator5 = ctx.guild.get_role(794300647137738762)
-                        await ctx.author.add_roles(donator5)
-                        await ctx.author.add_roles(donator10)
-                    else:
-                        return
-                else:
-                    await ctx.send(
-                        "You do not have enough balance to redeem this perk."
-                    )
-            elif perk_level == "$20":
-                if balance >= 20:
-                    agreed = await self.confirm(
-                        ctx,
-                        ctx.author,
-                        balance,
-                        20,
-                        perk_level,
-                        60,
-                        totdonated,
-                        ctx.message.jump_url,
-                    )
-                    if agreed:
-                        donator20 = ctx.guild.get_role(794301389769015316)
-                        donator10 = ctx.guild.get_role(794301192359378954)
-                        donator5 = ctx.guild.get_role(794300647137738762)
-                        await ctx.author.add_roles(donator5)
-                        await ctx.author.add_roles(donator10)
-                        await ctx.author.add_roles(donator20)
-                    else:
-                        return
-                else:
-                    await ctx.send(
-                        "You do not have enough balance to redeem this perk."
-                    )
-            elif perk_level == "$30":
-                if balance >= 30:
-                    agreed = await self.confirm(
-                        ctx,
-                        ctx.author,
-                        balance,
-                        30,
-                        perk_level,
-                        90,
-                        totdonated,
-                        ctx.message.jump_url,
-                    )
-                    if agreed:
-                        donator20 = ctx.guild.get_role(794301389769015316)
-                        donator10 = ctx.guild.get_role(794301192359378954)
-                        donator5 = ctx.guild.get_role(794300647137738762)
-                        await ctx.author.add_roles(donator5)
-                        await ctx.author.add_roles(donator10)
-                        await ctx.author.add_roles(donator20)
-                        donator30 = ctx.guild.get_role(794302939371929622)
-                        serverboss = ctx.guild.get_role(820294120621867049)
-                        await ctx.author.add_roles(serverboss)
-                        await ctx.author.add_roles(donator30)
-                    else:
-                        return
-                else:
-                    await ctx.send(
-                        "You do not have enough balance to redeem this perk."
-                    )
-            else:
-                await ctx.send("Please specify a perk level. `$5`, `$10`, `$20`, `$30`")
-        else:
-            await ctx.send("You are not a donator yet and have no balance.")
+        donation_info = await self.get_details(ctx.author.id)
+        if donation_info is None:
+            return await ctx.reply("You are not a donator yet and have no balance.")
 
-    @donator.group(invoke_without_command=True)
+        if donation_info["perk_name"] != "None":
+            return await ctx.reply("You have already redeemed a perk. Please wait for it to expire.")
+        
+        perks_unlocked = [p for p in (5, 10, 20, 30) if donation_info["balance"] >= p]
+        
+        redemption_embed = discord.Embed(title="**Balance**", colour=0x5865F2)
+        self.add_donation_details(redemption_embed, donation_info)
+        redemption_view = RedemptionView(ctx=ctx, user_id=ctx.author.id, perks_unlocked=perks_unlocked)
+
+        await ctx.reply("Which perk level would you like to redeem?\nCheck out <#948755871167565824> for benefits of each tier", embed=redemption_embed, view=redemption_view)
+
+
+    @donator.group(invoke_without_command=True, aliases=["lb"])
     @checks.has_permissions(PermissionLevel.MODERATOR)
-    async def leaderboard(self, ctx):
+    async def leaderboard(self, ctx: commands.Context):
         """
         Shows the donator leaderboard
         """
-        if ctx.invoked_subcommand is None:
-            return await ctx.send(
-                "Are you looking for `??donator leaderboard total`, `??donator leaderboard balance`,`??donator "
-                "leaderboard top10` or `??donator leaderboard top1`?"
-            )
 
-    @commands.Cog.listener("on_raw_reaction_add")
-    @commands.Cog.listener("on_raw_reaction_remove")
-    async def leaderboard_pagination(
-        self, payload: discord.RawReactionActionEvent
-    ) -> None:
-        if str(payload.emoji) not in ("\U000025c0", "\U000025b6"):
-            return
+        balance_embed = discord.Embed(description="")
+        balance_embed.set_author(name="Top users with the most balance")
 
-        if payload.member and payload.member.bot:
-            return
+        top10_embed = discord.Embed(description="")
+        top10_embed.set_author(name="Top 10 donors in the past 30 days")
 
-        message = await self.bot.get_channel(payload.channel_id).fetch_message(
-            payload.message_id
-        )
+        top_1_embed = discord.Embed(description="")
+        top_1_embed.set_author(name="Idk what this is lmao")
 
-        if not message.embeds:
-            return
+        session = EmbedPaginatorSession(ctx, balance_embed, top_1_embed, top10_embed)
+        await session.run()
 
-        if message.embeds[0].title in ("**Top Donators**", "**Top Balance**"):
-            return self.bot.dispatch("update_leaderboard", message, payload)
-
-    @commands.Cog.listener("on_update_leaderboard")
-    async def update_leaderboard(
-        self, message: discord.Message, payload: discord.RawReactionActionEvent
-    ) -> None:
-        embed = message.embeds[0]
-        _, page_number = embed.footer.text.split()
-        page_number = int(page_number)
-        page_add = str(payload.emoji) == "\U000025b6"
-        leaderboard_type = (
-            "total_donated" if embed.title == "**Top Donators**" else "balance"
-        )
-
-        if page_number == 1 and not page_add:
-            return
-
-        offset = (page_number - 2) * 10
-        if page_add:
-            offset = page_number * 10
-
-        top = (
-            await self.coll.find()
-            .sort(leaderboard_type, -1)
-            .skip(offset)
-            .limit(10)
-            .to_list(length=10)
-        )
-
-        if not top:
-            return
-
-        embed.description = ""
-
-        for pos, donation_information in enumerate(top, start=1 + offset):
-            user_id, total = (
-                donation_information["user_id"],
-                donation_information[leaderboard_type],
-            )
-
-            embed.description += f"{pos}. <@{user_id}> ➜ ${total}\n"
-
-        embed.set_footer(text=f"Page: {page_number + (-1) ** (page_add + 1)}")
-        await message.edit(embed=embed)
+        return
 
     @leaderboard.command()
     async def total(self, ctx: commands.Context):
         """
         Shows the total donated leaderboard
         """
-        top = (
-            await self.coll.find()
-            .sort("total_donated", -1)
-            .limit(10)
-            .to_list(length=10)
-        )
+        top = await self.coll.find().sort("total_donated", -1).to_list(length=None)
+        chunks = [top[i:i+10] for i in range(0, len(top), 10)]
+        embeds = []
+        previous_total, current_position = None, None
 
-        embed = discord.Embed(title="**Top Donators**", description="", colour=0x10EA64)
-        for pos, donation_information in enumerate(top, start=1):
-            user_id, total = (
-                donation_information["user_id"],
-                donation_information["total_donated"],
-            )
+        for page_pos, batch in enumerate(chunks):
+            embed = discord.Embed(title="**Top Donators**", description="", colour=0x10EA64)
+            for pos, donation_information in enumerate(batch, start=1):
+                user_id, total = donation_information["user_id"], donation_information["total_donated"]
+                position = pos + page_pos * 10
 
-            embed.description += f"{pos}. <@{user_id}> ➜ ${total}\n"
+                if total == previous_total:
+                    position = current_position
+                    
+                if total != previous_total:
+                    previous_total = total
+                    current_position = position
 
-        embed.set_footer(text="Page: 1")
-        message = await ctx.send(embed=embed)
-        await message.add_reaction("\U000025c0")
-        await message.add_reaction("\U000025b6")
+                embed.description += f"{position}) <@{user_id}> ➜ ${total}\n"
+
+            embeds.append(embed)
+
+        session = EmbedPaginatorSession(ctx, *embeds)
+        await session.run()
 
     @leaderboard.command()
     async def balance(self, ctx: commands.Context):
         """
         Shows the balance leaderboard
         """
-        top = await self.coll.find().sort("balance", -1).limit(10).to_list(length=10)
+        top = await self.coll.find().sort("balance", -1).to_list(length=None)
 
         embed = discord.Embed(title="**Top Balance**", description="", colour=0x10EA64)
         for pos, donation_information in enumerate(top, start=1):
@@ -991,7 +744,7 @@ class Donators(commands.Cog):
         guild = self.bot.get_guild(645753561329696785)
         channel = guild.get_channel(channel_id)
         await channel.delete(
-            reason="Your channel has been deleted since you’re no longer in the top 10 donators!"
+            reason="This channel has been deleted since they're no longer in the top 10 donators"
         )
         await self.coll.update_one(
             {"user_id": user_id}, {"$set": {"channel_id": "None"}}

@@ -132,7 +132,7 @@ class DonationTracking(commands.Cog):
             donator, amount=current_amount - amount
         )
 
-        await self.remove_coins(donator.id, amount)
+        await self.remove_coins(donator.id, -amount)
         await self.remove_new_dono_roles(donator)
         await ctx.reply(f"Removed **⏣ {amount:,}** from {donator.name}", embed=donation)
 
