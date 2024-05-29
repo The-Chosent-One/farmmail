@@ -244,7 +244,7 @@ class Extras(commands.Cog):
         if after not in guild.members:
             return
 
-        regex = re.compile(r"\b(discord.gg|\.gg|gg)/(dank)\b")
+        regex = re.compile(r"\b(discord\.gg|\.gg|gg)/dank\b")
         if regex.search(str(after.activity)):
             if role not in after.roles:
                 await after.add_roles(role)
