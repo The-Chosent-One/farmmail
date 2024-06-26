@@ -33,8 +33,8 @@ class Snipe(commands.Cog):
         ):
             return
         em = discord.Embed(description=message.content)
-        em.set_author(name=message.author.display_name, icon_url=message.author.avatar)
-        em.set_footer(text=f"{message.author.id} •  Sent at: ")
+        em.set_author(name=f"{message.author.display_name} ({message.author.id})", icon_url=message.author.avatar)
+        em.set_footer(text="Sent at: ")
         em.timestamp = message.created_at
         self.sniped[str(message.channel.id)] = em
 
@@ -85,8 +85,8 @@ class Snipe(commands.Cog):
         em = discord.Embed(
             description=f"**Before: ** {before.content}\n**After: ** {after.content}"
         )
-        em.set_author(name=before.author.display_name, icon_url=before.author.avatar)
-        em.set_footer(text=f"{before.author.id} •  Sent at: ")
+        em.set_author(name=f"{before.author.display_name} ({before.author.id})", icon_url=before.author.avatar)
+        em.set_footer(text="Sent at: ")
         em.timestamp = before.created_at
         self.esniped[str(before.channel.id)] = em
 
