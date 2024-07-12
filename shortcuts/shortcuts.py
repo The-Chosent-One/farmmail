@@ -20,11 +20,11 @@ class Shortcuts(commands.Cog):
         """
         if proof2 is None:
             await ctx.send(
-                f"```.ban {user.id} DM [Advertisements]({proof}) are against the rules of the server. Appeal this ban at https://discord.gg/appeal ```"
+                f"```.ban {user.id} DM [Advertisements]({proof}) are against the rules of the server. Appeal this ban at https://discord.gg/MtbmPNpwqv ```"
             )
         else:
             await ctx.send(
-                f"```.ban {user.id} DM Advertisements are against the rules of the server. Proof: [1]({proof}), [2]({proof2}). Appeal this ban at https://discord.gg/appeal```"
+                f"```.ban {user.id} DM Advertisements are against the rules of the server. Proof: [1]({proof}), [2]({proof2}). Appeal this ban at https://discord.gg/MtbmPNpwqv```"
             )
 
 
