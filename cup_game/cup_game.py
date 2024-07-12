@@ -129,7 +129,7 @@ class cupGame(commands.Cog):
 
         await ctx.send(scores_message, embed=scores_embed)
 
-    @commands.Cog.command(aliases=["cg"])
+    @commands.command(aliases=["cg"])
     @commands.check_any(
         checks.has_permissions(PermissionLevel.MODERATOR),
         commands.has_role(855877108055015465),  # Giveaway Manager
