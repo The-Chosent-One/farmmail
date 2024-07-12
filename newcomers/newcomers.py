@@ -80,7 +80,7 @@ class NewComers(commands.Cog):
         elif days < 14:
             await self.tempban(user, str((14 - days) * 24 * 60 * 60))
             await user.ban(
-                reason="Your account is too new! Feel free to join back when your account is atleast 15 days old. discord.gg/dank"
+                reason="Your account is too new! Feel free to join back when your account is at least 15 days old. discord.gg/dank"
             )
             await channel.send(
                 f"Auto banned {user} `{user.id}` for being younger than 14d. Come back in {(14 - days)} days"
