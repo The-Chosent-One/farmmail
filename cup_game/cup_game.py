@@ -151,7 +151,7 @@ class cupGame(commands.Cog):
 
         start_embed = discord.Embed(
             title="Which cup has the coin?",
-            description=f"**Rules:**\n\n - From {cups} cups you have to click on a cup which you think has the coin.\n - You can choose 1 option only.\n - For each round, `20 seconds` is given.\n - If you guess correctly you earn 1 point.\n - Person with maximum points after {rounds} rounds wins!\n - Game starts after 30s.",
+            description=f"**Rules:**\n\n - From {cups} cups you have to click on a cup which you think has the coin.\n - You can choose 1 option only.\n - For each round, `10 seconds` is given.\n - If you guess correctly you earn 1 point.\n - Person with maximum points after {rounds} rounds wins!\n - Game starts after 30s.",
             colour=0x5865F2,
         )
 
@@ -193,12 +193,12 @@ class cupGame(commands.Cog):
                 description=f"Round {round_number} of {rounds}",
                 colour=0x5865F2,
             )
-            round_embed.set_footer(text="Round is ending in 20 seconds")
+            round_embed.set_footer(text="Round is ending in 10 seconds")
             message = await ctx.send(embed=round_embed, view=round_view)
             round_view.message = message
             start_view.current_view = round_view
 
-            await asyncio.sleep(20)
+            await asyncio.sleep(10)
             if start_view.cancelled:
                 return
             await round_view.end_round()
