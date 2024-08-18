@@ -130,7 +130,7 @@ class cupGame(commands.Cog):
         await ctx.send(scores_message, embed=scores_embed)
 
     @commands.command(aliases=["cg"])
-    @@checks.has_permissions(PermissionLevel.REGULAR)
+    @checks.has_permissions(PermissionLevel.REGULAR)
     async def cupgame(self, ctx: commands.Context, cups: int, rounds: int):
         """Play a game of chance with some cups, created for the use in events/giveaways"""
         # see donation_tracking for why this convoluted way of checking perms has to be done
