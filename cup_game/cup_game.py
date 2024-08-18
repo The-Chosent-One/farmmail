@@ -130,12 +130,13 @@ class cupGame(commands.Cog):
         await ctx.send(scores_message, embed=scores_embed)
 
     @commands.command(aliases=["cg"])
-    @commands.check_any(
-        checks.has_permissions(PermissionLevel.MODERATOR),
-        commands.has_role(855877108055015465),  # Giveaway Manager
-    )
+    @@checks.has_permissions(PermissionLevel.REGULAR)
     async def cupgame(self, ctx: commands.Context, cups: int, rounds: int):
         """Play a game of chance with some cups, created for the use in events/giveaways"""
+        # see donation_tracking for why this convoluted way of checking perms has to be done
+        if sum(map(ctx.author._roles.has, [723035638357819432, 814004142796046408, 790290355631292467])) and not ctx.author._roles.has(855877108055015465):
+            return
+        
         if cups < 0 or rounds < 0:
             return await ctx.reply("Neither of those can be negative")
         if rounds == 0 or cups == 0:
