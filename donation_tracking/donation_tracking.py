@@ -102,13 +102,13 @@ class DonationTracking(commands.Cog):
     async def add(
         self, ctx: commands.Context, donator: discord.Member, amount: Amount
     ) -> None:
+        """Add a dank donation to a member."""
         # since we can't commands.check_any with a PermissionLevel.MODERATOR and commands.has_role, 
         # we allow all staff roles to access this command, but filter the staff roles except Giveaway Manager
         # This basically allows the union of PermissionLevel.MODERATOR and Giveaway Managers
         if sum(map(ctx.author._roles.has, [723035638357819432, 814004142796046408, 790290355631292467])) and not ctx.author._roles.has(855877108055015465):
             return
-        
-        """Add a dank donation to a member."""
+
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
 
