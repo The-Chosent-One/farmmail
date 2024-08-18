@@ -98,13 +98,16 @@ class DonationTracking(commands.Cog):
         return
 
     @dankdonor.command()
-    @commands.check_any(
-        checks.has_permissions(PermissionLevel.MODERATOR),
-        commands.has_role(855877108055015465),  # Giveaway Manager
-    )
+    @checks.has_permissions(PermissionLevel.REGULAR)
     async def add(
         self, ctx: commands.Context, donator: discord.Member, amount: Amount
     ) -> None:
+        # since we can't commands.check_any with a PermissionLevel.MODERATOR and commands.has_role, 
+        # we allow all staff roles to access this command, but filter the staff roles except Giveaway Manager
+        # This basically allows the union of PermissionLevel.MODERATOR and Giveaway Managers
+        if sum(map(ctx.author._roles.has, [723035638357819432, 814004142796046408, 790290355631292467])) and not ctx.author._roles.has(855877108055015465):
+            return
+        
         """Add a dank donation to a member."""
         await self.add_coins(donator.id, amount)
         await self.add_new_dono_roles(donator)
@@ -113,14 +116,14 @@ class DonationTracking(commands.Cog):
         await ctx.reply(f"Added **⏣ {amount:,}** to {donator.name}", embed=donation)
 
     @dankdonor.command()
-    @commands.check_any(
-        checks.has_permissions(PermissionLevel.MODERATOR),
-        commands.has_role(855877108055015465),  # Giveaway Manager
-    )
+    @checks.has_permissions(PermissionLevel.REGULAR)
     async def remove(
         self, ctx: commands.Context, donator: discord.Member, amount: Amount
     ) -> None:
         """Remove a donation amount from a member."""
+        if sum(map(ctx.author._roles.has, [723035638357819432, 814004142796046408, 790290355631292467])) and not ctx.author._roles.has(855877108055015465):
+            return
+        
         current_amount = await self.get_coins(donator.id)
 
         if current_amount is None:
