@@ -27,7 +27,7 @@ class BanBattles(commands.Cog):
             "- The event is a free-for-all, meaning that everyone is allowed to ban others and can be banned by others in turn\n"
             "- The last person left in the server wins\n\n"
             f"Here's the invite link for the ban battle: {invite}\n"
-            "-# If it says it's an invalid invite, you missed the event!"
+            "-# (If it says it's an invalid invite, you missed the event!)"
         )
 
 async def setup(bot: commands.Bot):
