@@ -1,6 +1,7 @@
 from discord.ext import commands
 from core import checks
 from core.models import PermissionLevel
+import discord
 
 STAFF_ROLE_ID = 1231811207095128085
 
