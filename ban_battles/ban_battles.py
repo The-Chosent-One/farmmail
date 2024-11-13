@@ -23,7 +23,7 @@ class BanBattles(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._fight_farm = None
-        # self.bot.add_view(message_id=)
+        self.bot.add_view(message_id=1306263726663532584)
 
     @property
     def fight_farm(self):
