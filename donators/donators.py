@@ -168,40 +168,9 @@ class Donators(commands.Cog):
         """
         Donator commands.
         """
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="Donator Commands", color=0x10EA64)
-            embed.add_field(
-                name="`donator add`",
-                value="Adds a donation value to a member",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator remove`",
-                value="Removes a donation value from a member",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator balance`",
-                value="Shows the balance of the member.",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator details`",
-                value="Shows the details of a members donations.",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator redeem`",
-                value="Redeems the requested perk",
-                inline=False,
-            )
-            embed.add_field(
-                name="`donator leaderboard`",
-                value="Shows the donation leaderboard",
-                inline=False,
-            )
-
-            await ctx.send(embed=embed)
+        # triggers the error handler
+        # which sends the help message
+        raise commands.BadArgument()
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
