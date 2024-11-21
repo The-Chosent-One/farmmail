@@ -168,9 +168,7 @@ class Donators(commands.Cog):
         """
         Donator commands.
         """
-        # triggers the error handler
-        # which sends the help message
-        raise commands.MissingRequiredArgument(ctx)
+        await ctx.send_help(donator)
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
