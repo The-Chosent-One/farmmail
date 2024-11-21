@@ -95,7 +95,7 @@ class DonationTracking(commands.Cog):
     @commands.group(invoke_without_command=True, aliases=["dd"])
     async def dankdonor(self, ctx: commands.Context) -> None:
         """Dank donation commands."""
-        return
+        await ctx.send_help(ctx.command)
 
     @dankdonor.command()
     @checks.has_permissions(PermissionLevel.REGULAR)
