@@ -163,7 +163,7 @@ class Donators(commands.Cog):
             await self.bot.db.plugins.Autoreact.delete_one({"user_id": user})
         return True
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=False)
     async def donator(self, ctx):
         """
         Donator commands.
