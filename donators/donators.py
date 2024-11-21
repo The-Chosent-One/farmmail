@@ -168,7 +168,7 @@ class Donators(commands.Cog):
         """
         Donator commands.
         """
-        await ctx.send_help(donator)
+        await ctx.send_help(ctx.command)
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
