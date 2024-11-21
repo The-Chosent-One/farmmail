@@ -163,14 +163,14 @@ class Donators(commands.Cog):
             await self.bot.db.plugins.Autoreact.delete_one({"user_id": user})
         return True
 
-    @commands.group(invoke_without_command=False)
+    @commands.group(invoke_without_command=True)
     async def donator(self, ctx):
         """
         Donator commands.
         """
         # triggers the error handler
         # which sends the help message
-        raise commands.BadArgument()
+        raise commands.MissingRequiredArgument()
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
