@@ -170,7 +170,7 @@ class Donators(commands.Cog):
         """
         # triggers the error handler
         # which sends the help message
-        raise commands.MissingRequiredArgument()
+        raise commands.MissingRequiredArgument(ctx)
 
     @donator.command()
     @checks.has_permissions(PermissionLevel.ADMIN)
