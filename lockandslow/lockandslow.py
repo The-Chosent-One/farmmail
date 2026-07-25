@@ -6,6 +6,7 @@ from datetime import timedelta
 ALLOWED_CHANNELS = {
     995563300618240100, # 🎲┃event-room¹
     995563935874949160, # 🎲┃event-room²
+    1481678180321591368, # ⁠🎲┃event-room³ 
     756552586248585368, # 💲┃mafia-lobby
     747853054329487500, # 🎁┃donate-here
     1150860516349190144, # 🎫┃lottery-entries
