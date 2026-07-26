@@ -233,19 +233,25 @@ class Extras(commands.Cog):
 
     @commands.Cog.listener("on_presence_update")
     async def ggdank(self, before, after):
-        if str(before.activity) == str(after.activity):
+        # Ensure we only process this event for the specific guild the role belongs to
+        if after.guild.id != 645753561329696785:
             return
 
-        guild = self.bot.get_guild(645753561329696785)
-        role = guild.get_role(916271809333166101)
+        role = after.guild.get_role(916271809333166101)
         if role is None:
             return
 
-        if after not in guild.members:
-            return
+        # Users can have multiple activities (e.g., Playing a game AND a Custom Status).
+        # .activity only returns the primary one (usually the game). We must check all of them.
+        has_invite = False
+        for activity in after.activities:
+            if isinstance(activity, discord.CustomActivity) and activity.name:
+                regex = re.compile(r"(discord\.gg|\.gg|gg)/dank", re.IGNORECASE)
+                if regex.search(activity.name):
+                    has_invite = True
+                    break
 
-        regex = re.compile(r"\b(discord\.gg|\.gg|gg)/dank\b")
-        if regex.search(str(after.activity)):
+        if has_invite:
             if role not in after.roles:
                 await after.add_roles(role)
         else:
