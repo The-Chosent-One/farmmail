@@ -231,33 +231,6 @@ class Extras(commands.Cog):
         """Returns the Recipient's ID"""
         await ctx.send(ctx.thread.id)
 
-    @commands.Cog.listener("on_presence_update")
-    async def ggdank(self, before, after):
-        # Ensure we only process this event for the specific guild the role belongs to
-        if after.guild.id != 645753561329696785:
-            return
-
-        role = after.guild.get_role(916271809333166101)
-        if role is None:
-            return
-
-        # Users can have multiple activities (e.g., Playing a game AND a Custom Status).
-        # .activity only returns the primary one (usually the game). We must check all of them.
-        has_invite = False
-        for activity in after.activities:
-            if isinstance(activity, discord.CustomActivity) and activity.name:
-                regex = re.compile(r"(discord\.gg|\.gg|gg)/dank", re.IGNORECASE)
-                if regex.search(activity.name):
-                    has_invite = True
-                    break
-
-        if has_invite:
-            if role not in after.roles:
-                await after.add_roles(role)
-        else:
-            if role in after.roles:
-                await after.remove_roles(role)
-
 
     @commands.command()
     @checks.thread_only()
@@ -341,6 +314,20 @@ class Extras(commands.Cog):
         overwrites.read_messages = True
         await ctx.channel.set_permissions(member, overwrite=overwrites)
         await ctx.channel.send(f"Added {member.mention}")
+
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def ru(self, ctx, member: discord.Member):
+        """
+        Remove a user from the channel
+        """
+        overwrites = ctx.channel.overwrites_for(member)
+        overwrites.read_messages = None
+        if overwrites.is_empty():
+            await ctx.channel.set_permissions(member, overwrite=None)
+        else:
+            await ctx.channel.set_permissions(member, overwrite=overwrites)
+        await ctx.channel.send(f"Removed {member.mention}")
 
 
 async def setup(bot):
