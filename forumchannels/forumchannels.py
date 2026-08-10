@@ -5,10 +5,6 @@ import time
 FORUM_CHANNELS_COOLDOWN_MAP = {
     1023274993045471272: 604800,  # 🐸┃dank-memer
     1025640363811143710: 604800,  # 🤖┃all-bots
-    1025637841608388608: 604800,  # 🔱┃premium-all-bots
-    1025636802134028318: 604800,  # 🥉┃tier-3-all-bots¹
-    1025636756709720144: 604800,  # 🥈┃tier-2-all-bots
-    1025636171780468736: 604800,  # 🏆┃tier-1-all-bots
 }
 
 
